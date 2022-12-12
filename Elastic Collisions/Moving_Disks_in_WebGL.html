@@ -65,7 +65,7 @@ let  animating = false;  // is the animation running?
    colors are used when the user selects colored rather than red points.
    The positions of the points are updated for each frame of the animation. */
 
-const  POINT_COUNT = 100;
+const  POINT_COUNT = 20;
 const  pointCoords = new Float32Array( 2*POINT_COUNT );
 const  pointVelocities = new Float32Array( 2*POINT_COUNT );
 const  pointRandomColors = new Float32Array( 3*POINT_COUNT );
@@ -108,7 +108,12 @@ function createPointData() { // called during initialization to fill the arrays 
 }
 
 function randomIntGenerator(int) {
-    return Math.floor(Math.random()*int);
+    let size = Math.floor(Math.random()*int);
+    if(size < 8) {
+        return 8;
+    } else {
+        return size;
+    }
 }
 
 function updatePointCoordsForFrame() { // called during an animation, before each frame.
@@ -136,8 +141,79 @@ function updatePointCoordsForFrame() { // called during an animation, before eac
             pointVelocities[i] = -Math.abs(pointVelocities[i]); // and make sure point is moving in negative direction
         }
     }
+
+    collisionDetection();
 }
 
+function collisionDetection() {
+    for (let i = 0; i < POINT_COUNT; i++) {
+        for (let j = i+1; j < POINT_COUNT; j++) {
+            let [x1, y1, radius1] = [pointCoords[2*i], pointCoords[2*i+1], pointRandomSizes[i]/2];
+            let [x2, y2, radius2] = [pointCoords[2*j], pointCoords[2*j+1], pointRandomSizes[j]/2];
+
+            if(!checkCollision(x1, y1, radius1, x2, y2, radius2)) {
+                collisionCalculation(x1, y1, radius1, x2, y2, radius2, i, j);
+            }
+        }
+    }
+}
+
+function checkCollision(x1, y1, r1, x2, y2, r2) {
+    let euclideanDistance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    return euclideanDistance > r1 + r2; //Returns true if they aren't overlapping
+}
+
+function collisionCalculation(x1, y1, r1, x2, y2, r2, i, j) {
+    let [vx1, vy1]  = [pointVelocities[2 * i], pointVelocities[2 * i + 1]];
+    let [vx2, vy2] = [pointVelocities[2 * j], pointVelocities[2 * j + 1]];
+    let distance = 0;
+
+    //move points apart until they are not overlapping
+    while (!checkCollision(x1, y1, r1, x2, y2, r2)) {
+        x1 -= vx1 / 100; //todo change 100
+        y1 -= vy1 / 100;
+        x2 -= vx2 / 100;
+        y2 -= vy2 / 100;
+        distance++;
+    }
+
+    //set the new coordinates
+    pointCoords[2 * i] = x1;
+    pointCoords[2 * i + 1] = y1;
+    pointCoords[2 * j] = x2;
+    pointCoords[2 * j + 1] = y2;
+
+    //calculate new velocities
+    let m1 = r1 * r1 * Math.PI;
+    let m2 = r2 * r2 * Math.PI;
+
+    let theta = -Math.atan2(y2 - y1, x2 - x1);
+    let v1 = rotate([vx1, vy1], theta);
+    let v2 = rotate([vx2, vy2], theta);
+    let u1 = rotate([(v1[0] * (m1 - m2)) / (m1 + m2) + (v2[0] * 2 * m2) / (m1 + m2), v1[1], ], -theta);
+    let u2 = rotate([(v2[0] * (m2 - m1)) / (m1 + m2) + (v1[0] * 2 * m1) / (m1 + m2), v2[1], ], -theta);
+
+    vx1 = u1[0];
+    vy1 = u1[1];
+    vx2 = u2[0];
+    vy2 = u2[1];
+
+    // set the new velocities
+    pointVelocities[2 * i] = vx1;
+    pointVelocities[2 * i + 1] = vy1;
+    pointVelocities[2 * j] = vx2;
+    pointVelocities[2 * j + 1] = vy2;
+
+    //Step D: move the points the removed distance
+    pointCoords[2 * i] += (vx1 * distance) / 100;
+    pointCoords[2 * i + 1] += (vy1 * distance) / 100;
+    pointCoords[2 * j] += (vx2 * distance) / 100;
+    pointCoords[2 * j + 1] += (vy2 * distance) / 100;
+}
+
+function rotate(v, theta) {
+    return [v[0] * Math.cos(theta) - v[1] * Math.sin(theta), v[0] * Math.sin(theta) + v[1] * Math.cos(theta),];
+}
 
 /**
  *  Draws the content of the canvas, in this case, one primitive ot
@@ -149,6 +225,7 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT);  // clear the canvas (to black)
     
     /* Get options from the user interface. */
+    let  centerDots = document.getElementById("centerDots").checked;
     let  randomSizes = document.getElementById("randomSizes").checked;
     let  randomColors = document.getElementById("colorCheckbox").checked;
     let  pointsize = Number(document.getElementById("sizeChoice").value);
@@ -161,7 +238,9 @@ function draw() {
     gl.enableVertexAttribArray(attributeCoords); 
    
     /* Set up values for the "color" attribute */
-    
+
+
+
     if ( randomColors ) { // use the attribute values from the color VBO, filled during initialization
         gl.enableVertexAttribArray(attributeColor); 
     }
@@ -185,6 +264,14 @@ function draw() {
     /* Draw all the points with one command. */
    
     gl.drawArrays(gl.POINTS, 0, POINT_COUNT);
+
+    if (centerDots) {
+        gl.disableVertexAttribArray(attributeSize);
+        gl.vertexAttrib1f(attributeSize, 6);
+        gl.disableVertexAttribArray(attributeColor);
+        gl.vertexAttrib3f(attributeColor, 0, 0, 0);
+        gl.drawArrays(gl.POINTS, 0, POINT_COUNT);
+    }
     
 }
 
@@ -316,6 +403,12 @@ function init() {
             draw();
         }
     };
+
+    document.getElementById("centerDots").onchange = function() {
+        if (!animating) {
+            draw();
+        }
+    };
     doAnimationCheckbox();
 }
 
@@ -334,6 +427,7 @@ window.onload = init;  // Arrange for init() to be called after page has loaded.
     <label><b><input type="checkbox" id="animateCheckbox">&nbsp;Animate</b></label>
     <label><b><input type="checkbox" id="colorCheckbox">&nbsp;Random&nbsp;Colors</b></label>
     <label><b><input type="checkbox" id="randomSizes">&nbsp;Random&nbsp;Sizes</b></label>
+    <label><b><input type="checkbox" id="centerDots">&nbsp;Center Dots</b></label>
     <label><b>Point Size:</b>&nbsp;<select id="sizeChoice">
         <option value="8">Small</option>
         <option value="16">Medium</option>
