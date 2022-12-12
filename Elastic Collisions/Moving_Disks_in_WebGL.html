@@ -108,7 +108,12 @@ function createPointData() { // called during initialization to fill the arrays 
 }
 
 function randomIntGenerator(int) {
-    return Math.floor(Math.random()*int);
+    let size = Math.floor(Math.random()*int);
+    if(size < 8) {
+        return 8;
+    } else {
+        return size;
+    }
 }
 
 function updatePointCoordsForFrame() { // called during an animation, before each frame.
@@ -149,6 +154,7 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT);  // clear the canvas (to black)
     
     /* Get options from the user interface. */
+    let  centerDots = document.getElementById("centerDots").checked;
     let  randomSizes = document.getElementById("randomSizes").checked;
     let  randomColors = document.getElementById("colorCheckbox").checked;
     let  pointsize = Number(document.getElementById("sizeChoice").value);
@@ -161,7 +167,9 @@ function draw() {
     gl.enableVertexAttribArray(attributeCoords); 
    
     /* Set up values for the "color" attribute */
-    
+
+
+
     if ( randomColors ) { // use the attribute values from the color VBO, filled during initialization
         gl.enableVertexAttribArray(attributeColor); 
     }
@@ -185,6 +193,14 @@ function draw() {
     /* Draw all the points with one command. */
    
     gl.drawArrays(gl.POINTS, 0, POINT_COUNT);
+
+    if (centerDots) {
+        gl.disableVertexAttribArray(attributeSize);
+        gl.vertexAttrib1f(attributeSize, 6);
+        gl.disableVertexAttribArray(attributeColor);
+        gl.vertexAttrib3f(attributeColor, 0, 0, 0);
+        gl.drawArrays(gl.POINTS, 0, POINT_COUNT);
+    }
     
 }
 
@@ -316,6 +332,12 @@ function init() {
             draw();
         }
     };
+
+    document.getElementById("centerDots").onchange = function() {
+        if (!animating) {
+            draw();
+        }
+    };
     doAnimationCheckbox();
 }
 
@@ -334,6 +356,7 @@ window.onload = init;  // Arrange for init() to be called after page has loaded.
     <label><b><input type="checkbox" id="animateCheckbox">&nbsp;Animate</b></label>
     <label><b><input type="checkbox" id="colorCheckbox">&nbsp;Random&nbsp;Colors</b></label>
     <label><b><input type="checkbox" id="randomSizes">&nbsp;Random&nbsp;Sizes</b></label>
+    <label><b><input type="checkbox" id="centerDots">&nbsp;Center Dots</b></label>
     <label><b>Point Size:</b>&nbsp;<select id="sizeChoice">
         <option value="8">Small</option>
         <option value="16">Medium</option>
