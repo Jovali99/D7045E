@@ -72,11 +72,25 @@ const  pointRandomColors = new Float32Array( 3*POINT_COUNT );
 const  pointRandomSizes = new Float32Array( POINT_COUNT );
 
 function createPointData() { // called during initialization to fill the arrays with data.
+
+    let  size = 34/2 // Largest point size is 32
+    let xPointDisplacer = size;
+    let yPointDisplacer = size;
     for (let i = 0; i < POINT_COUNT; i++) {
-           // Each point has two coordinates and two velocities.  Velocity number k
-           // tells how fast coordinate number k changes in pixels per frame.
-        pointCoords[2*i] = canvas.width * Math.random();  // x-coordinate of point
-        pointCoords[2*i+1] = canvas.height * Math.random();  // y-coordinate of point
+
+        // Displaces all the points forming a square
+        if (i%(Math.floor(Math.sqrt(POINT_COUNT)))==0 && i != 0) {
+            xPointDisplacer += size*2;
+            yPointDisplacer = size;
+        }
+
+        // Each point has two coordinates and two velocities.  Velocity number k
+        // tells how fast coordinate number k changes in pixels per frame.
+        pointCoords[2*i] = xPointDisplacer;  // x-coordinate of point
+        pointCoords[2*i+1] = yPointDisplacer;  // y-coordinate of point
+
+        yPointDisplacer += size*2;      //Displaces the next point by the diameter of the points
+
         let  randomVelocity = 1 + 3*Math.random();
         let  randomAngle = 2*Math.PI * Math.random();
         pointVelocities[2*i] = randomVelocity * Math.cos(randomAngle);
@@ -111,6 +125,7 @@ function updatePointCoordsForFrame() { // called during an animation, before eac
         }
     }
     for (let i = 1; i < 2*POINT_COUNT; i += 2) { // y-coords
+
         pointCoords[i] += pointVelocities[i];
         if (pointCoords[i]-size < 0) {
             pointCoords[i] = size-(pointCoords[i]-size);// move coord back onto canvas
@@ -241,7 +256,7 @@ function doFrame() {
 
 function doAnimationCheckbox() {
     let  anim = document.getElementById("animateCheckbox").checked;
-    if (anim !== animating) {
+    if (!anim == animating) {
         animating = anim;
         if (animating) {
             doFrame();
@@ -281,7 +296,7 @@ function init() {
             "<p>Sorry, could not initialize the WebGL graphics context: " + e + "</p>";
         return;
     }
-    document.getElementById("animateCheckbox").checked = true;
+    document.getElementById("animateCheckbox").checked = false;
     document.getElementById("colorCheckbox").checked = true;
     document.getElementById("sizeChoice").value = "32";
     document.getElementById("animateCheckbox").onchange = doAnimationCheckbox;
@@ -320,9 +335,9 @@ window.onload = init;  // Arrange for init() to be called after page has loaded.
     <label><b><input type="checkbox" id="colorCheckbox">&nbsp;Random&nbsp;Colors</b></label>
     <label><b><input type="checkbox" id="randomSizes">&nbsp;Random&nbsp;Sizes</b></label>
     <label><b>Point Size:</b>&nbsp;<select id="sizeChoice">
-        <option value="16">Small</option>
-        <option value="32">Medium</option>
-        <option value="64">Large</option>
+        <option value="8">Small</option>
+        <option value="16">Medium</option>
+        <option value="32">Large</option>
     </select></label>
 </p>
 
